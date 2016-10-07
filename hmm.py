@@ -75,7 +75,7 @@ def bio_list_insert_start_tag(bio_list, ngram):
 
     return all_tokens;
 
-def transition_counts( bio_list, ngram = 2 ):
+def transition_counts( bio_list, ngram ):
 # returns counts_table and total_occ_counts which has sum of counts of each row, which will be used to calculate probability
 # ngram is feature is built here so as to be able to extend HMM transition probs to trigram etc.
 # #Design Decision begin
@@ -124,6 +124,20 @@ def transition_counts( bio_list, ngram = 2 ):
 
     return {"counts_table": counts_table, "total_occ_counts": total_occ_of_index_tuple}
 
+
+def transition_probs( bio_list, ngram =2 ):
+#returns transition probabilities
+# #TODO: Think about smoothing.
+    trans = transition_counts(bio_list, ngram)
+    counts_table = trans["counts_table"]
+    total_counts = trans["total_occ_counts"]
+    trans_prob = counts_table;
+    for index_tuple in total_counts:
+        for cell in counts_table[index_tuple]:
+            trans_prob[index_tuple][cell] /= total_counts[index_tuple]
+    return(trans_prob)
+
+
 def display_table(table):
 # displays a table which is a dict of dict
 # i.e. 2 dimensional table, can display tables for trigram etc.
@@ -141,7 +155,7 @@ def display_table(table):
         row_contents = [str(k)];
         for v in cols:
             if v in table[k]:
-                row_contents += [ str(table[k][v]) ]
+                row_contents += [ str(table[k][v])[0:10] ]
             else:
                 row_contents += [ "0" ]
 

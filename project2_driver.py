@@ -87,4 +87,6 @@ read = hmm.read_everything(path+"train_BIO/");
 #start_tag = hmm.gen_start_tag(3);
 #bio_list = hmm.bio_list_insert_start_tag(read["bio_list"], 2);
 trans_counts = hmm.transition_counts(read["bio_list"],3);
+trans_probs = hmm.transition_probs(read["bio_list"], 3);
 hmm.display_table(trans_counts["counts_table"]);
+hmm.display_table(trans_probs);
