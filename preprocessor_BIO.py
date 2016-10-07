@@ -1,78 +1,72 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Oct  1 21:46:01 2016
+Created on Fri Sep 30 11:44:41 2016
 
 """
-
-import Preprocess_BIO
-import baseline      #for first baseline
-import baseline1
-import kaggle_op
-
-#
-# User should enter the directory path having 'train' folder.
-#
-input_path_is_correct = 0;
-while (not input_path_is_correct) :
-    #/Users/Deekshith/Desktop/Cornell/2_NLP/assignment_2/nlp_project2_uncertainty/
-    path = input("\n\nInput path to the train folder : "); 
-    final_path = path+"train/";
-    print("\nwill start reading at:", final_path, "\n");    
-    confirm = input("If that's right enter yes else no: "); #"yes"
-    if (confirm.lower() =="yes") :
-        input_path_is_correct = 1
+import file_reader
+import os
+import shutil
 
 
-#
-# Create output folders.
-# One folder for storing preprocessed files
-# Second folder for storing the baseline output of test-public
-# Third folder for stroing the baseline output of test-private
-#
-Preprocess_BIO.create_folder(path+"train_BIO")
-Preprocess_BIO.create_folder(path+"test-public-baseline1/")
-Preprocess_BIO.create_folder(path+"test-private-baseline1/")
+def create_folder(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    else:
+        shutil.rmtree(folder_path)
+        os.makedirs(folder_path)
+  
+def preprocess_train_files(input_folder, output_folder) :
+    all_text_files = [];
+    all_text_files += file_reader.list_all_text_files(input_folder);    
+    for file in all_text_files:
+        write_handle = open(output_folder+file, "w");
+        read_handle = open(input_folder+file, "r")
+        new_line = ""
+        prev_tag = "_" 
+        for line in read_handle:
+            tag = "";
+            if not line.strip():
+                #
+                # Every sentence should be processed independently.
+                # Insert new line in corresponding trainBIO file
+                prev_tag = "_";
+                new_line +="\n"
+                continue;
+            line_split = line.split();    
+            if (line_split[2] == '_'):
+                #
+                # 3rd column value is '_'. Replace that with 'O' 
+                prev_tag = '_';
+                tag = 'O';
+                #
+                # Current value in the 3rd column can be CUE-1 OR CUE-2 or CUE-3 etc
+                # 3rd check below is to handle case like,
+                # a p CUE1
+                # b q CUE1
+                # c r CUE2
+                #
+                # output should be,
+                # a p B
+                # b q I
+                # c r B
+                #
+            else:
+                if (prev_tag == '_' or
+                    prev_tag != line_split[2]) :
+                    #
+                    # 3rd column value is CUE* and it is the first occurrence of
+                    # CUE* in the current sequence.
+                    #
+                    prev_tag = line_split[2]
+                    tag = 'B';
+                elif (prev_tag == line_split[2]):
+                    #
+                    # 3rd column value is CUE* and previous value in the 3rd column
+                    # was also CUE*
+                    #
+                    prev_tag = line_split[2]               
+                    tag = 'I'
+            new_line += line_split[0]+"\t"+line_split[1]+"\t"+tag+"\n";           
+        write_handle.write(new_line);
+        write_handle.close();
 
-#
-# Preporces the train folder and replace CUE* with B or I and _ with O
-#
-Preprocess_BIO.preprocess_train_files(path+"train/", path+"train_BIO/")
-
-
-'''                             FIRST BASELINE                              '''
-'''
-#
-# After the preprocessing generate dictionary of possible weasel words
-#                               
-preprocess_dict = baseline.generate_weasel_dictionary(path+"train_BIO/")
-
-baseline.generate_baseline_files(path+"test-public/",
-                                 path+"test-public-baseline1/",
-                                 preprocess_dict)
-
-baseline.generate_baseline_files(path+"test-private/",
-                                 path+"test-private-baseline1/",
-                                 preprocess_dict)
-                                 
-kaggle_op.gen_kaggle_file(path+"test-public-baseline1/",
-                          path+"test-private-baseline1/",
-                          path)
-'''
-
-'''                            SECOND BASELINE                              '''
-                          
-
-preprocess_dict = baseline1.generate_weasel_dictionary(path+"train_BIO/")
-
-
-baseline1.generate_baseline_files(path+"test-public/",
-                                 path+"test-public-baseline1/",
-                                 preprocess_dict)
-
-baseline1.generate_baseline_files(path+"test-private/",
-                                 path+"test-private-baseline1/",
-                                 preprocess_dict)
-                                 
-kaggle_op.gen_kaggle_file(path+"test-public-baseline1/",
-                          path+"test-private-baseline1/",
-                          path) 
