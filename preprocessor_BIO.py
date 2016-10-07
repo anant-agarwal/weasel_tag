@@ -4,16 +4,6 @@ Created on Fri Sep 30 11:44:41 2016
 
 """
 import file_reader
-import os
-import shutil
-
-
-def create_folder(folder_path):
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    else:
-        shutil.rmtree(folder_path)
-        os.makedirs(folder_path)
   
 def preprocess_train_files(input_folder, output_folder) :
     all_text_files = [];

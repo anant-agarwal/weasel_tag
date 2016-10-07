@@ -8,6 +8,7 @@ import preprocessor_BIO
 import baseline      #for first baseline
 import baseline1
 import kaggle_op
+import file_reader
 
 local_run = 0;
 
@@ -38,9 +39,9 @@ else:
 # Second folder for storing the baseline output of test-public
 # Third folder for stroing the baseline output of test-private
 #
-preprocessor_BIO.create_folder(path+"train_BIO")
-preprocessor_BIO.create_folder(path+"test-public-baseline1/")
-preprocessor_BIO.create_folder(path+"test-private-baseline1/")
+file_reader.create_folder(path+"train_BIO")
+file_reader.create_folder(path+"test-public-baseline1/")
+file_reader.create_folder(path+"test-private-baseline1/")
 
 #
 # Preporces the train folder and replace CUE* with B or I and _ with O

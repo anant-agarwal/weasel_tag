@@ -8,6 +8,7 @@ Read all files
 
 """
 import os;
+import shutil
 
 def read_file( path_to_file ):
     file_handle = open( path_to_file,"r");
@@ -25,4 +26,10 @@ def read_lines_as_list(path_to_file):
     with open(path_to_file) as f:
         line_list = f.readlines();     
     return(line_list);
-    
+
+def create_folder(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    else:
+        shutil.rmtree(folder_path)
+        os.makedirs(folder_path)
