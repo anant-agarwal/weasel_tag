@@ -78,8 +78,18 @@ def bio_list_insert_start_tag(bio_list, ngram):
 def transition_counts( bio_list, ngram = 2 ):
 # returns counts_table and total_occ_counts which has sum of counts of each row, which will be used to calculate probability
 # ngram is feature is built here so as to be able to extend HMM transition probs to trigram etc.
+# #Design Decision begin
+# Column of <phi> needs to be removed, reason:
+#   1. As we are tagging one sentence at a time, so P(<phi>|t) is irrevelant, and that probability mass should be redistributed to others.
+#   2. Only rows with Phi are needed as P(t3|t2t1phi) are the only possible combinations. 
+# #Design Decision end
+
     counts_table = dict();
-    start_tag_len = len(gen_start_tag(ngram));
+
+    start_tag_list = gen_start_tag(ngram);
+    start_tag_len = len(start_tag_list);
+    start_token = start_tag_list[0];
+
     bio_list = bio_list_insert_start_tag( bio_list, ngram )
 
     index_tuple = tuple(bio_list[0:start_tag_len]);
@@ -103,6 +113,15 @@ def transition_counts( bio_list, ngram = 2 ):
         index_tuple = index_tuple+(tag,);
         if(len(index_tuple)>ngram-1):
             index_tuple = index_tuple[1:];
+
+    #removing column <phi>
+    for index_tuple in total_occ_of_index_tuple:
+        if( start_token in counts_table[index_tuple]):
+            #delete from total count:
+            total_occ_of_index_tuple[index_tuple] -= counts_table[index_tuple][start_token]
+            #delete from count_table:
+            del counts_table[index_tuple][start_token]
+
     return {"counts_table": counts_table, "total_occ_counts": total_occ_of_index_tuple}
 
 def display_table(table):
