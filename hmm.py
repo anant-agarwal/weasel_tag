@@ -110,6 +110,7 @@ def transition_counts( bio_list, ngram ):
 
         counts_table[index_tuple][tag] += 1
         total_occ_of_index_tuple[index_tuple] += 1;
+        
         index_tuple = index_tuple+(tag,);
         if(len(index_tuple)>ngram-1):
             index_tuple = index_tuple[1:];
@@ -137,11 +138,41 @@ def transition_probs( bio_list, ngram =2 ):
             trans_prob[index_tuple][cell] /= total_counts[index_tuple]
     return(trans_prob)
 
+def emmission_counts( train_corpus):
+#returns Count of words per tag and total occurence of a tag, to be used for calculating P(w|t)
+    counts_table = dict()
+    total_occ = dict();
+    for line in train_corpus:
+        word = line["word"];
+        #pos = line["pos"];
+        bio = line["bio"];
+        if( word == "\n"):
+            continue;
+        if not bio in counts_table:
+            counts_table[bio] = dict()
+            total_occ[bio] = 0
+        if( not word in counts_table[bio] ):
+            counts_table[bio][word]=0;
+        counts_table[bio][word] +=1;
+        total_occ[bio] +=1;
+    return {"counts_table": counts_table, "total_occ_counts": total_occ}
+
+def emmission_probs( train_corpus ):
+#returns emmision probabilities
+# #TODO: Think about smoothing
+    emm = emmission_counts(train_corpus)
+    counts_table = emm["counts_table"]
+    total_counts = emm["total_occ_counts"]
+    emm_prob = counts_table;
+    for bio in total_counts:
+        for cell in counts_table[bio]:
+            emm_prob[bio][cell] /= total_counts[bio]
+    return(emm_prob)
+
 
 def display_table(table):
 # displays a table which is a dict of dict
 # i.e. 2 dimensional table, can display tables for trigram etc.
-
     cols_dict = dict();
     for k in table:
         for v in table[k]:
