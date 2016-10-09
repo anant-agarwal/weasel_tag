@@ -181,16 +181,17 @@ def tag_new_sentence( sentence, em_probs, trans_probs, ngram ):
             try:
                 em_prob = em_probs[tag][curr_column["word"]]
             except:
-                em_prob = 1
+                em_prob = 0.00001
+                print( tag, curr_column["word"] )
             maxi = -1;
             bp_tag = "";
             for prev_tag in ['B', 'I', 'O']:
                 try:
                     trans_prob = trans_probs[(prev_tag,)][tag];
                 except:
-                    display_table(trans_probs);
+                    #display_table(trans_probs);
                     print(prev_tag, tag)
-                    trans_probs = 0;
+                    trans_prob = 0;
                 state_trans_prob = trans_prob * prev_column["em"][prev_tag]
                 if( maxi < state_trans_prob ):
                     maxi = state_trans_prob
@@ -210,12 +211,12 @@ def tag_new_sentence( sentence, em_probs, trans_probs, ngram ):
             maxi = sentence[-1]["em"][tag]
             max_tag = tag
 
-    sentence[-1]["final_tag"] = max_tag
+    sentence[-1]["bio"] = max_tag
 
     #backtrace now:
     j = sent_len -2;
-    while(j>1):
-        sentence[j]["final_tag"]= sentence[j+1]["bp"][sentence[j+1]["final_tag"]]
+    while(j>0):
+        sentence[j]["bio"]= sentence[j+1]["bp"][sentence[j+1]["bio"]]
         j -=1
 
     #remove entry for <phi> and return
@@ -281,3 +282,11 @@ def display_table(table):
                 row_contents += [ "0" ]
 
         print(row_format.format(*row_contents));
+
+
+
+## for supressing Os
+# we just change the number of Os in the count table
+# we dont remove the words from the training data 
+# it's more like smoothing
+# 
