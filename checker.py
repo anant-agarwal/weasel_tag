@@ -22,20 +22,20 @@ def sentence_score( truth, gen_file ):
 
     i = 0
     for line in truth_handle:
-        if( not i ):
-            continue
-        line_split = line.split(",")
-        truth_sentence_nums = line_split[1].split(" ")
+        if(  i ):
+            line_split = line.split(",")
+            truth_sentence_nums = line_split[1].strip().split(" ")
+        i+=1;
 
     truth_set = set( truth_sentence_nums )
 
-    gen_file_handle = open(truth,"r")
+    gen_file_handle = open(gen_file,"r")
     i = 0
     for line in gen_file_handle:
-        if( not i ):
-            continue
-        line_split = line.split(",")
-        gen_file_sentence_nums = line_split[1].split(" ")
+        if( i ):
+            line_split = line.split(",")
+            gen_file_sentence_nums = (line_split[1]).strip().split(" ")
+        i+=1;
 
     gen_set = set(gen_file_sentence_nums)
 
