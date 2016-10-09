@@ -55,20 +55,21 @@ def gen_kaggle_op_lists(op_path):
    print("Total number of sentences in", op_path, ": ", sentence_counter-1, "\n");
    return([output, sentence_output]);
 
-def gen_kaggle_file(public_path, private_path, file_write_path):
+def gen_kaggle_file(public_path, private_path, file_write_path, extra_tag, only_public = 0):
    word_file_content = "Type,Spans\n";
    sent_file_content = "Type,Indices\n";
-   
+
    public_output = gen_kaggle_op_lists(public_path);
-   private_output = gen_kaggle_op_lists(private_path);
    word_file_content += "CUE-public,"+"".join(public_output[0][1:])+"\n";
-   word_file_content += "CUE-private,"+"".join(private_output[0][1:])+"\n";
-       
    sent_file_content += "SENTENCE-public," + "".join(public_output[1])+"\n";
-   sent_file_content += "SENTENCE-private," + "".join(private_output[1])+"\n";
+
+   if(not only_public):
+       private_output = gen_kaggle_op_lists(private_path);
+       word_file_content += "CUE-private,"+"".join(private_output[0][1:])+"\n";
+       sent_file_content += "SENTENCE-private," + "".join(private_output[1])+"\n";
    
-   write_word_handle = open(file_write_path+"kag_word_op.csv", "w");
+   write_word_handle = open(file_write_path+"_"+extra_tag+"_"+"kag_word_op.csv", "w");
    write_word_handle.write(word_file_content);
    
-   write_sent_handle = open(file_write_path+"kag_sent_op.csv", "w");
+   write_sent_handle = open(file_write_path+"_"+extra_tag+"_"+"kag_sent_op.csv", "w");
    write_sent_handle.write(sent_file_content);
