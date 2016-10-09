@@ -49,6 +49,7 @@ file_reader.create_folder(path+"test-private-baseline1/")
 #
 preprocessor_BIO.preprocess_train_files(path+"train/", path+"train_BIO/")
 
+preprocessor_BIO.generate_cross_validation_set(path)
 
 '''
 There are 2 Baselines: {1,2} set baseline_number accordingly to run them
