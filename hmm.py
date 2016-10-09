@@ -138,8 +138,8 @@ def transition_probs( bio_list, ngram =2 ):
             trans_prob[index_tuple][cell] /= total_counts[index_tuple]
     return(trans_prob)
 
-def emmission_counts( train_corpus):
-#returns Count of words per tag and total occurence of a tag, to be used for calculating P(w|t)
+def emission_counts( train_corpus):
+#returns count of words per tag and total occurence of a tag, to be used for calculating P(w|t)
     counts_table = dict()
     total_occ = dict();
     for line in train_corpus:
@@ -157,17 +157,107 @@ def emmission_counts( train_corpus):
         total_occ[bio] +=1;
     return {"counts_table": counts_table, "total_occ_counts": total_occ}
 
-def emmission_probs( train_corpus ):
+def emission_probs( train_corpus ):
 #returns emmision probabilities
 # #TODO: Think about smoothing
-    emm = emmission_counts(train_corpus)
-    counts_table = emm["counts_table"]
-    total_counts = emm["total_occ_counts"]
-    emm_prob = counts_table;
+    em = emission_counts(train_corpus)
+    counts_table = em["counts_table"]
+    total_counts = em["total_occ_counts"]
+    em_prob = counts_table;
     for bio in total_counts:
         for cell in counts_table[bio]:
-            emm_prob[bio][cell] /= total_counts[bio]
-    return(emm_prob)
+            em_prob[bio][cell] /= total_counts[bio]
+    return(em_prob)
+
+def tag_new_sentence( sentence, em_probs, trans_probs, ngram ):
+    sentence = [{"word": "<phi>", "em":{"B":1,"I":1,"O":1}, "bp":{}, "pos": "<phi>"}] + sentence
+    sent_len = len( sentence )
+    for i in range(1, sent_len):
+        curr_column = sentence[i]
+        prev_column = sentence[i-1]
+        curr_column["em"] = dict();
+        curr_column["bp"] = dict();
+        for tag in ['B', 'I', 'O']:
+            try:
+                em_prob = em_probs[tag][curr_column["word"]]
+            except:
+                em_prob = 1
+            maxi = -1;
+            bp_tag = "";
+            for prev_tag in ['B', 'I', 'O']:
+                try:
+                    trans_prob = trans_probs[(prev_tag,)][tag];
+                except:
+                    display_table(trans_probs);
+                    print(prev_tag, tag)
+                    trans_probs = 0;
+                state_trans_prob = trans_prob * prev_column["em"][prev_tag]
+                if( maxi < state_trans_prob ):
+                    maxi = state_trans_prob
+                    bp_tag = prev_tag
+
+            curr_state_prob = maxi * em_prob
+            curr_column["em"][tag] = curr_state_prob
+            curr_column["bp"][tag] = bp_tag
+
+        sentence[i] = curr_column
+
+    #check which one is max for last word
+    maxi = -1;
+    max_tag = "";
+    for tag in ['B','I','O']:
+        if( maxi < sentence[-1]["em"][tag]):
+            maxi = sentence[-1]["em"][tag]
+            max_tag = tag
+
+    sentence[-1]["final_tag"] = max_tag
+
+    #backtrace now:
+    j = sent_len -2;
+    while(j>1):
+        sentence[j]["final_tag"]= sentence[j+1]["bp"][sentence[j+1]["final_tag"]]
+        j -=1
+
+    #remove entry for <phi> and return
+    return sentence[1:]
+
+def gen_hmm_tag( train_folder_path, test_folder_path, output_folder_path, ngram = 2):
+
+    training_data = read_everything( train_folder_path )
+    em_probs = emission_probs(training_data["train_corpus"])
+    trans_probs = transition_probs(training_data["bio_list"], ngram )
+
+    all_text_files = file_reader.list_all_text_files(test_folder_path)
+    for file in all_text_files:
+        read_handle = open(test_folder_path+file,"r")
+        sentence = [];
+        tagged_words_list = []
+        for line in read_handle:
+            if(line=="\n"):
+                    #one sentence has been read, intitiate tagging:
+                    tagged_sentence = tag_new_sentence( sentence, em_probs, trans_probs, ngram )
+                    tagged_words_list += unroll_dict( tagged_sentence )
+                    tagged_words_list[-1] += "\n" #this is to add an empty new line after sentence
+                    #reset sentence[] to process new sentence
+                    sentence = []
+            else:
+                line_split = line.split()
+                word = line_split[0]
+                pos = line_split[1]
+                sentence += [{"word":word, "pos":pos}]
+        new_file_content = "\n".join(tagged_words_list)
+        write_handle = open(output_folder_path+file,"w");
+        write_handle.write(new_file_content)
+        write_handle.close();
+
+def unroll_dict( dict_list ):
+# dict_list is a list of dictionaries.
+# each element of dict_list is converted into a string and added to list.
+# A list of the form: [...,"abc POS B",... ]    is returned
+    arr = [];
+    for k in dict_list:
+        arr += [k["word"]+"\t"+k["pos"]+"\t"+k["bio"]];
+    return arr
 
 
 def display_table(table):
