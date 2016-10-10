@@ -122,7 +122,9 @@ def transition_counts( bio_list, ngram ):
             total_occ_of_index_tuple[index_tuple] -= counts_table[index_tuple][start_token]
             #delete from count_table:
             del counts_table[index_tuple][start_token]
-
+    '''original_o =  counts_table[('O',)]['O'];
+    counts_table[('O',)]['O']  = 3* counts_table[('O',)]['B'] #/=20;
+    total_occ_of_index_tuple[('O',)] -= (original_o -     counts_table[('O',)]['O']);'''
     return {"counts_table": counts_table, "total_occ_counts": total_occ_of_index_tuple}
 
 
@@ -181,7 +183,7 @@ def tag_new_sentence( sentence, em_probs, trans_probs, ngram ):
             try:
                 em_prob = em_probs[tag][curr_column["word"]]
             except:
-                em_prob = 0.00001
+                em_prob = 0.0001
                 print( tag, curr_column["word"] )
             maxi = -1;
             bp_tag = "";
@@ -190,7 +192,7 @@ def tag_new_sentence( sentence, em_probs, trans_probs, ngram ):
                     trans_prob = trans_probs[(prev_tag,)][tag];
                 except:
                     #display_table(trans_probs);
-                    print(prev_tag, tag)
+                #    print(prev_tag, tag)
                     trans_prob = 0;
                 state_trans_prob = trans_prob * prev_column["em"][prev_tag]
                 if( maxi < state_trans_prob ):
@@ -233,8 +235,10 @@ def gen_hmm_tag( train_folder_path, test_folder_path, output_folder_path, ngram 
         read_handle = open(test_folder_path+file,"r")
         sentence = [];
         tagged_words_list = []
+        #original_text = read_handle.read();
         for line in read_handle:
-            if(line=="\n"):
+            #print(line)
+            if(not line.strip()): #=="\n"
                     #one sentence has been read, intitiate tagging:
                     tagged_sentence = tag_new_sentence( sentence, em_probs, trans_probs, ngram )
                     tagged_words_list += unroll_dict( tagged_sentence )
@@ -247,6 +251,11 @@ def gen_hmm_tag( train_folder_path, test_folder_path, output_folder_path, ngram 
                 pos = line_split[1]
                 sentence += [{"word":word, "pos":pos}]
         new_file_content = "\n".join(tagged_words_list)
+        read_handle = open(test_folder_path+file,"r")
+        original_text = read_handle.read()
+        if(len(new_file_content) + 1 != len(original_text)):
+            print(new_file_content)
+        
         write_handle = open(output_folder_path+file,"w");
         write_handle.write(new_file_content)
         write_handle.close();

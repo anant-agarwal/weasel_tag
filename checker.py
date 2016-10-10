@@ -15,7 +15,10 @@ def recall(tp, fn):
 def fscore( tp, fp, fn):
     p = precision(tp, fp)
     r = recall(tp, fn)
-    return 2*p*r/(p+r)
+    if(p or r):
+        return 2*p*r/(p+r)
+    else:
+        return 0
 
 def sentence_score( truth, gen_file ):
     truth_handle = open(truth,"r")

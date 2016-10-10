@@ -68,13 +68,17 @@ def generate_cross_validation_set(folder_path) :
     #
     # Assumigng 80% is dev test and 20% is cross validation set.
     #
-    file_reader.create_folder(folder_path+"train_BIO"+"/with_tag")
-    file_reader.create_folder(folder_path+"train_BIO"+"/without_tag")
+    cv_truth = folder_path+"cv_truth/";
+    cv_test = folder_path+"cv_test/"
+    
+
+    file_reader.create_folder(cv_truth)
+    file_reader.create_folder(cv_test)
 
     while dev_test_len < len(all_text_files) :
         file = all_text_files[dev_test_len]
-        write_handle_1 = open(folder_path+"train_BIO"+"/with_tag/"+file, "w")
-        write_handle_2 = open(folder_path+"train_BIO"+"/without_tag/"+file, "w")
+        write_handle_1 = open(cv_truth+file, "w")
+        write_handle_2 = open(cv_test+file, "w")
         read_handle  = open(folder_path+"train_BIO/"+file, "r")
 
         line = read_handle.read();
@@ -84,6 +88,6 @@ def generate_cross_validation_set(folder_path) :
         write_handle_1.close();
         write_handle_2.close();
 
-        os.remove(folder_path+"train_BIO/"+file)
+        #os.remove(folder_path+"train_BIO/"+file)
         dev_test_len += 1
 
