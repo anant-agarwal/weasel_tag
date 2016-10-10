@@ -18,6 +18,7 @@ local_run = 1;
 if( local_run ):
     import proj_config;
     path = proj_config.path;
+    #path = "/Users/Deekshith/Desktop/Cornell/2_NLP/assignment_2/part1/original/"
     final_path = path+"train/";
     baseline_number =1;
 else:
@@ -123,7 +124,7 @@ kaggle_op.gen_kaggle_file(path+"cv_test/",
                           path,
                           "test_gen",1)
 
-                          
 checker.sentence_score(path+"_test_truth_kag_sent_op.csv",path+"_test_gen_kag_sent_op.csv" )
 checker.sentence_score(path+"_test_truth_kag_word_op.csv",path+"_test_gen_kag_word_op.csv" )
-''''''
+
+preprocessor_BIO.compare_results(path)
