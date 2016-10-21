@@ -27,7 +27,6 @@ def read_everything(folder_path):
                 pos = line_split[1]
                 bio = line_split[2]
             train_corpus += [{"word":word, "pos":pos, "bio":bio}]
-
     word_list = [ x["word"] for x in train_corpus ];
     pos_list  = [ x["pos"]  for x in train_corpus ];
     bio_list  = [ x["bio"]  for x in train_corpus ];
@@ -298,4 +297,4 @@ def display_table(table):
 # we just change the number of Os in the count table
 # we dont remove the words from the training data 
 # it's more like smoothing
-# 
+#

@@ -12,13 +12,13 @@ import file_reader
 import hmm
 import nltk
 import checker
+import cross_validation
 
 local_run = 1;
 
 if( local_run ):
     import proj_config;
     path = proj_config.path;
-    #path = "/Users/Deekshith/Desktop/Cornell/2_NLP/assignment_2/part1/original/"
     final_path = path+"train/";
     baseline_number =1;
 else:
@@ -109,7 +109,7 @@ em_probs = hmm.emission_probs(read["train_corpus"]);
                           
 ''' ********* CV Block ************* '''    
 preprocessor_BIO.generate_cross_validation_set(path)
-                      
+em_probs = hmm.emission_probs(read["train_corpus"]);
 hmm.gen_hmm_tag(path+"train_BIO/", path+"cv_test/", path+"cv_test/", 2)
 #hmm.gen_hmm_tag(path+"train_BIO/", path+"test-private/", path+"test-private-hmm/", 2)
 
@@ -127,4 +127,4 @@ kaggle_op.gen_kaggle_file(path+"cv_test/",
 checker.sentence_score(path+"_test_truth_kag_sent_op.csv",path+"_test_gen_kag_sent_op.csv" )
 checker.sentence_score(path+"_test_truth_kag_word_op.csv",path+"_test_gen_kag_word_op.csv" )
 
-preprocessor_BIO.compare_results(path)
+cross_validation.compare_results(path)

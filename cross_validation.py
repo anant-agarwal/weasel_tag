@@ -1,65 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Sep 30 11:44:41 2016
+Created on Thu Oct 20 23:31:51 2016
 
+@author: Deekshith
 """
-import os
-import file_reader
 
-def preprocess_train_files(input_folder, output_folder) :
-    all_text_files = [];
-    all_text_files += file_reader.list_all_text_files(input_folder);    
-    for file in all_text_files:
-        write_handle = open(output_folder+file, "w");
-        read_handle = open(input_folder+file, "r")
-        new_line = ""
-        prev_tag = "_" 
-        for line in read_handle:
-            tag = "";
-            if not line.strip():
-                #
-                # Every sentence should be processed independently.
-                # Insert new line in corresponding trainBIO file
-                prev_tag = "_";
-                new_line +="\n"
-                continue;
-            line_split = line.split();    
-            if (line_split[2] == '_'):
-                #
-                # 3rd column value is '_'. Replace that with 'O' 
-                prev_tag = '_';
-                tag = 'O';
-                #
-                # Current value in the 3rd column can be CUE-1 OR CUE-2 or CUE-3 etc
-                # 3rd check below is to handle case like,
-                # a p CUE1
-                # b q CUE1
-                # c r CUE2
-                #
-                # output should be,
-                # a p B
-                # b q I
-                # c r B
-                #
-            else:
-                if (prev_tag == '_' or
-                    prev_tag != line_split[2]) :
-                    #
-                    # 3rd column value is CUE* and it is the first occurrence of
-                    # CUE* in the current sequence.
-                    #
-                    prev_tag = line_split[2]
-                    tag = 'B';
-                elif (prev_tag == line_split[2]):
-                    #
-                    # 3rd column value is CUE* and previous value in the 3rd column
-                    # was also CUE*
-                    #
-                    prev_tag = line_split[2]               
-                    tag = 'I'
-            new_line += line_split[0]+"\t"+line_split[1]+"\t"+tag+"\n";           
-        write_handle.write(new_line);
-        write_handle.close();
+import file_reader
+import os
 
 def compare_results(folder_path):
     cv_test = folder_path+"cv_test/"
@@ -133,7 +80,6 @@ def generate_cross_validation_set(folder_path) :
     #
     cv_truth = folder_path+"cv_truth/";
     cv_test = folder_path+"cv_test/"
-    
 
     file_reader.create_folder(cv_truth)
     file_reader.create_folder(cv_test)

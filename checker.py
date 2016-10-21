@@ -15,6 +15,8 @@ def recall(tp, fn):
 def fscore( tp, fp, fn):
     p = precision(tp, fp)
     r = recall(tp, fn)
+    print("Precision: ", p, "\n")
+    print("Recall: ", r, "\n")
     if(p or r):
         return 2*p*r/(p+r)
     else:
