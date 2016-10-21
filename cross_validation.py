@@ -63,13 +63,13 @@ def compare_results(folder_path):
         write_handle_compare.close();
     write_handle_all_files.write(all_files_compare_data)
     write_handle_all_files.close()
-    print("\nIncorrect prediction =",incorrect_prediction)
-    print("Correct prediction =",correct_prediction)
-    print("Total prediction =",total_prediction)
-    print("Incorrect prediction ratio", incorrect_prediction/total_prediction)
-    print("\nCount of B =",count_B)
-    print("Count of I = ",count_I)
-    print("Count of O =",count_O)
+    #print("\nIncorrect prediction =",incorrect_prediction)
+    #print("Correct prediction =",correct_prediction)
+    #print("Total prediction =",total_prediction)
+    #print("Incorrect prediction ratio", incorrect_prediction/total_prediction)
+    #print("\nCount of B =",count_B)
+    #print("Count of I = ",count_I)
+    #print("Count of O =",count_O)
 
 def generate_cross_validation_set(folder_path) :
     all_text_files = [];
@@ -99,4 +99,3 @@ def generate_cross_validation_set(folder_path) :
 
         os.remove(folder_path+"train_BIO/"+file)
         dev_test_len += 1
-

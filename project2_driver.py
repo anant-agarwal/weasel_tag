@@ -19,6 +19,7 @@ local_run = 1;
 if( local_run ):
     import proj_config;
     path = proj_config.path;
+    #path = "/Users/Deekshith/Desktop/Cornell/2_NLP/assignment_2/part1/original/"
     final_path = path+"train/";
     baseline_number =1;
 else:
@@ -28,8 +29,6 @@ else:
     #
     input_path_is_correct = 0;
     while (not input_path_is_correct) :
-        path = input("\n\nInput path to the train folder : ");
-        final_path = path+"train/";
         print("\nwill start reading at:", final_path, "\n");
         confirm = input("If that's right enter yes else no: "); 
         if (confirm.lower() =="yes") :
@@ -91,10 +90,10 @@ kaggle_op.gen_kaggle_file(path+"test-public-baseline1/",
 read = hmm.read_everything(path+"train_BIO/");
 #start_tag = hmm.gen_start_tag(3);
 #bio_list = hmm.bio_list_insert_start_tag(read["bio_list"], 2);
-trans_counts = hmm.transition_counts(read["bio_list"],2);
+trans_counts = hmm.transition_counts(read["bio_list"], 2);
 trans_probs = hmm.transition_probs(read["bio_list"], 2);
 em_counts = hmm.emission_counts(read["train_corpus"]);
-em_probs = hmm.emission_probs(read["train_corpus"]);
+em_probs = hmm.emission_probs(read["train_corpus"], read["word_list"]);
 #hmm.display_table(trans_counts["counts_table"]);
 #hmm.display_table(trans_probs);
 #hmm.display_table(em_counts["counts_table"]);
@@ -109,7 +108,7 @@ em_probs = hmm.emission_probs(read["train_corpus"]);
                           
 ''' ********* CV Block ************* '''    
 preprocessor_BIO.generate_cross_validation_set(path)
-em_probs = hmm.emission_probs(read["train_corpus"]);
+em_probs = hmm.emission_probs(read["train_corpus"], read["word_list"]);
 hmm.gen_hmm_tag(path+"train_BIO/", path+"cv_test/", path+"cv_test/", 2)
 #hmm.gen_hmm_tag(path+"train_BIO/", path+"test-private/", path+"test-private-hmm/", 2)
 

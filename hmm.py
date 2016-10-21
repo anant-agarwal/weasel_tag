@@ -5,6 +5,7 @@ Created on Fri Oct  7 00:33:48 2016
 @author: anant
 """
 import file_reader;
+import nltk
 
 def read_everything(folder_path):
 # read everything from the train files
@@ -89,7 +90,7 @@ def transition_counts( bio_list, ngram ):
     start_tag_len = len(start_tag_list);
     start_token = start_tag_list[0];
 
-    bio_list = bio_list_insert_start_tag( bio_list, ngram )
+    bio_list = bio_list_insert_start_tag(bio_list, ngram)
 
     index_tuple = tuple(bio_list[0:start_tag_len]);
 
@@ -98,6 +99,7 @@ def transition_counts( bio_list, ngram ):
 
     #to count all occurances of an index tuple
     total_occ_of_index_tuple = dict();
+
     for tag in bio_list:
         if not index_tuple in counts_table:
             #if index_tuple is seen for the first time
@@ -154,14 +156,139 @@ def emission_counts( train_corpus):
             total_occ[bio] = 0
         if( not word in counts_table[bio] ):
             counts_table[bio][word]=0;
+        #
+        # Handling unseen words using pos tags
+        #if( not pos in counts_table[bio] ):
+        #    counts_table[bio][pos]=0;
         counts_table[bio][word] +=1;
-        total_occ[bio] +=1;
+        #counts_table[bio][pos] += 1;
+
+        total_occ[bio] += 1;
     return {"counts_table": counts_table, "total_occ_counts": total_occ}
 
-def emission_probs( train_corpus ):
+def interpolate_get_freq(freq_of_freq, non_zero_arr, index):
+    value = 0;
+    if(non_zero_arr[index] != index ):
+        value = freq_of_freq[non_zero_arr[index]]/(non_zero_arr[index]-index+1);
+    else:
+        value = freq_of_freq[index];
+    return value;
+
+#
+''' TODO : Anant, please look at the interpolation code, i have added a hack! '''
+
+#
+# Move this to a new file once we have this working!!
+# add a column for unknown/unseen words for B I O
+#
+def good_turing_smoothing(em, word_list) :
+
+    word_list_dict = dict()
+    word_list_dict = nltk.FreqDist(word_list)
+
+    #
+    ''' Find out the max_freq value '''
+    #
+    max_freq = 40000;
+    freq_of_freq = [];
+
+    i = 0;
+    while i <= max_freq :
+        freq_of_freq.append(0); #Instead try with arrays.
+        i += 1;
+
+    counts_table = em["counts_table"]
+    total_counts = em["total_occ_counts"]
+
+    max_freq = -1;
+    #
+    # For each unique word in the corpus
+    #   for each tag in [B, I, O]
+    #       check if we have a column entry for the chosen word for the chosen key
+    #       if column is not found, then it is a unknown/unseen word, account that
+    #       bigram as bigram apperaring with the frequency of zero.
+    #       else if we find the entry in the column, update freq_of_freq table
+    #       Keep track of bigram with maximum frequency, do not consider bigrams appearing 0 times.
+    #
+    for key in word_list_dict:
+        for tag in ['B', 'I', 'O']:
+            try :
+                frequency = counts_table[tag][key]
+            except :
+                frequency = 0;
+            try :
+                freq_of_freq[frequency] += 1;
+            except:
+                print("Out of bound! ",frequency, key, tag)
+            if freq_of_freq[frequency] > max_freq and frequency != 0:
+                max_freq = freq_of_freq[frequency]
+
+        '''           GOOD TRUING SMOOTHING (EDIT COMMENTS HERE )            '''
+    #
+    # C* = (c+1)*Nc+1/Nc (what if Nc is zero)
+    #
+    # Applicable only for frequencies whihc are less than k(=5 for now)
+    # We are going to do smothing only for bigrams.
+    # in case of unigram N0 and N1 will be zero!
+    #
+
+    non_zero_index_arr = [];
+    freq_of_freq_index = 0;
+    next_non_zero_index = 0;
+    for v in freq_of_freq:
+        if(v != 0):
+            next_non_zero_index = freq_of_freq_index;
+        elif(next_non_zero_index < freq_of_freq_index):
+            next_non_zero_index = freq_of_freq_index;
+            while(freq_of_freq[next_non_zero_index] == 0):
+                next_non_zero_index += 1;
+                '''    HACK '''
+                if (next_non_zero_index >= 7000):
+                    break;
+        non_zero_index_arr.append(next_non_zero_index);
+        freq_of_freq_index += 1;
+    #print(non_zero_index_arr, "\n\n", freq_of_freq);
+    #ngram_count_of_zero_freq = freq_of_freq[0];
+    #good_turing_zero = interpolate_get_freq(freq_of_freq, non_zero_index_arr, 1) /ngram_count_of_zero_freq; #freq_of_freq[1]
+    k = 5; ##### parameter to be tuned with dev set
+    #temp_list = []
+    #zero_list = dict();
+    for key in word_list_dict:
+        for tag in ['B', 'I', 'O']:
+            try :
+                c = counts_table[tag][key]
+            except :
+                c = 0
+        if (c < k):
+            new_c = ((c+1)*
+                     (interpolate_get_freq(freq_of_freq, non_zero_index_arr,c+1)/
+                      interpolate_get_freq(freq_of_freq, non_zero_index_arr, c)));
+
+        if c < k and key in counts_table[tag]:
+            counts_table[tag][key] += new_c
+            counts_table[tag][key] -= c
+            total_counts[tag] += new_c
+            total_counts[tag] -= c
+
+        '''
+        if (print_count < 50):
+                #print(key,fdist[key])
+        print_count += 1
+
+        temp_list = key[0:ngrams-1];
+        temp_list += ('<zero>',)
+        temp_list = tuple(temp_list);
+        zero_list[temp_list] = good_turing_zero;
+    for x in zero_list:
+        fdist[x] = zero_list[x];
+'''
+    return {"counts_table": counts_table, "total_occ_counts": total_counts}
+
+def emission_probs( train_corpus, word_list ):
 #returns emmision probabilities
 # #TODO: Think about smoothing
     em = emission_counts(train_corpus)
+    em = good_turing_smoothing(em, word_list)
     counts_table = em["counts_table"]
     total_counts = em["total_occ_counts"]
     em_prob = counts_table;
@@ -173,17 +300,38 @@ def emission_probs( train_corpus ):
 def tag_new_sentence( sentence, em_probs, trans_probs, ngram ):
     sentence = [{"word": "<phi>", "em":{"B":1,"I":1,"O":1}, "bp":{}, "pos": "<phi>"}] + sentence
     sent_len = len( sentence )
+    handle_unseen_with_pos = 0
+
     for i in range(1, sent_len):
         curr_column = sentence[i]
         prev_column = sentence[i-1]
         curr_column["em"] = dict();
         curr_column["bp"] = dict();
+   #     increment_unseen = 1;
         for tag in ['B', 'I', 'O']:
             try:
                 em_prob = em_probs[tag][curr_column["word"]]
+           #     increment_unseen = 0
             except:
-                em_prob = 0.0001
-                print( tag, curr_column["word"] )
+                #em_prob = 0.0001
+                if handle_unseen_with_pos:
+                    try:
+                        em_prob = em_probs[tag][curr_column["pos"]]
+                        #print( tag, curr_column["word"] )
+                    except:
+                        # This pos was never found!
+                        em_prob = 0.0000000001
+                        print("tag pos match not in train set ",tag, curr_column["pos"] )
+                else :
+                    '''
+                    if( not curr_column["word"] in em_probs["B"] and
+                        not curr_column["word"] in em_probs["I"]
+                    and not curr_column["word"] in em_probs["O"]):
+                        unknown_word_count += 1
+                    else:
+                        unseen_word_count += 1
+                    '''
+                    em_prob = 0.0000000001
             maxi = -1;
             bp_tag = "";
             for prev_tag in ['B', 'I', 'O']:
@@ -221,28 +369,33 @@ def tag_new_sentence( sentence, em_probs, trans_probs, ngram ):
         j -=1
 
     #remove entry for <phi> and return
-    return sentence[1:]
+    return (sentence[1:])
 
 def gen_hmm_tag( train_folder_path, test_folder_path, output_folder_path, ngram = 2):
 
     training_data = read_everything( train_folder_path )
-    em_probs = emission_probs(training_data["train_corpus"])
+    em_probs = emission_probs(training_data["train_corpus"], training_data["word_list"] )
     trans_probs = transition_probs(training_data["bio_list"], ngram )
-
+    #unseen_word_count = 0
+    #unknown_word_count = 0
     all_text_files = file_reader.list_all_text_files(test_folder_path)
     for file in all_text_files:
         read_handle = open(test_folder_path+file,"r")
         sentence = [];
         tagged_words_list = []
         #original_text = read_handle.read();
+
         for line in read_handle:
             #print(line)
             if(not line.strip()): #=="\n"
                     #one sentence has been read, intitiate tagging:
-                    tagged_sentence = tag_new_sentence( sentence, em_probs, trans_probs, ngram )
+                    tagged_sentence= tag_new_sentence( sentence, em_probs, trans_probs, ngram )
+                    #tagged_sentence = tag_op[0]
                     tagged_words_list += unroll_dict( tagged_sentence )
                     tagged_words_list[-1] += "\n" #this is to add an empty new line after sentence
                     #reset sentence[] to process new sentence
+                    #unknown_word_count += tag_op[2]
+                    #unseen_word_count += tag_op[1]
                     sentence = []
             else:
                 line_split = line.split()
