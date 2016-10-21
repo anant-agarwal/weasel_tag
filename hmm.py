@@ -278,10 +278,27 @@ def tag_new_sentence( sentence, em_probs, trans_probs, ngram ):
     #remove entry for <phi> and return
     return (sentence[1:])
 
-def gen_hmm_tag( train_folder_path, test_folder_path, output_folder_path, ngram = 2):
-
+def gen_hmm_tag( train_folder_path, test_folder_path, output_folder_path, ngram = 2, config = {}):
+#this is the driver function for this file
+#it reads all the test data, puts it in appropriate data structures and initiates tagging.
+#We are tagging one sentence at a time.
+#parameter config is a dictionary, for controlling the type of tagging:
+#   Insert a key w_and_pos to change emission probs to P(w.pos | t)
+#   Insert a key pos_only to change emission probs to P( pos | t)
+#   Insert a key prune_train with tupel (B,I,O) to preune the training data
     training_data = read_everything( train_folder_path )
-    em_probs = emission_probs(training_data["train_corpus"], training_data["word_list"] )
+    if( "prune_train" in config ):
+        if( type(config["prune_train"]) != type( () ) or len(config["prune_train"]) != 3 ):
+            print("****ERROR: prune_train should be a 3tuple")
+        prune_config = config["prune_train"]
+        training_data = prune_train_data( training_data, prune_config[0], prune_config[1], prune_config[2] )
+
+    if( "w_and_pos" in config ):
+        training_data = word_pos(training_data)
+    if( "pos_only" in config ):
+        training_data = pos_instead_of_word(training_data)
+
+    em_probs = emission_probs(training_data["train_corpus"] , training_data["word_list"] )
     trans_probs = transition_probs(training_data["bio_list"], ngram )
     all_text_files = file_reader.list_all_text_files(test_folder_path)
     for file in all_text_files:
@@ -294,9 +311,13 @@ def gen_hmm_tag( train_folder_path, test_folder_path, output_folder_path, ngram 
             #print(line)
             if(not line.strip()): #=="\n"
                     #one sentence has been read, intitiate tagging:
-                    tagged_sentence= tag_new_sentence( sentence, em_probs, trans_probs, ngram )
-                    #tagged_sentence = tag_op[0]
-                    tagged_words_list += unroll_dict( tagged_sentence )
+                    if("w_and_pos" in config):
+                        sentence = word_pos_test_sent(sentence)
+                    if("pos_only" in config ):
+                        sentence = pos_instead_of_word_test_sent(sentence)
+
+                    tagged_sentence = tag_new_sentence( sentence, em_probs, trans_probs, ngram )
+                    tagged_words_list += unroll_dict( tagged_sentence, config )
                     tagged_words_list[-1] += "\n" #this is to add an empty new line after sentence
                     #reset sentence[] to process new sentence
                     #unknown_word_count += tag_op[2]
@@ -317,13 +338,24 @@ def gen_hmm_tag( train_folder_path, test_folder_path, output_folder_path, ngram 
         write_handle.write(new_file_content)
         write_handle.close();
 
-def unroll_dict( dict_list ):
+def unroll_dict( dict_list, config = {}):
 # dict_list is a list of dictionaries.
 # each element of dict_list is converted into a string and added to list.
 # A list of the form: [...,"abc POS B",... ]    is returned
     arr = [];
     for k in dict_list:
-        arr += [k["word"]+"\t"+k["pos"]+"\t"+k["bio"]];
+        word = k["word"]
+        pos = k["pos"]
+        bio = k["bio"]
+
+        if( "w_and_pos" in config ):
+            word = word[0]
+        elif("pos_only" in config):
+            temp = word
+            word = pos
+            pos = temp
+
+        arr += [word+"\t"+pos+"\t"+bio];
     return arr
 
 
@@ -349,10 +381,97 @@ def display_table(table):
 
         print(row_format.format(*row_contents));
 
+def word_pos ( training_data ):
+# modifies training data so that word is (word,pos) and all the rest of the code works out of the box for it.
+    corpus = training_data["train_corpus"]
+    i = 0;
+    word_list = []
+    for element in corpus:
+        tup = (corpus[i]["word"], corpus[i]["pos"]);
+        corpus[i]["word"] = tup
+        word_list += [tup]
+        i += 1
+    training_data["train_corpus"] = corpus
+    training_data["word_list"] = word_list
+    return training_data
+
+def word_pos_test_sent( sentence ):
+#This is similar to function word_pos, just that it is transforming the test sentence so that P(word.pos | t) works
+    new_sent = sentence;
+    i = 0;
+    for element in sentence:
+        new_sent[i]["word"] = (element["word"], element["pos"])
+        i += 1
+    return(new_sent)
 
 
-## for supressing Os
-# we just change the number of Os in the count table
-# we dont remove the words from the training data 
-# it's more like smoothing
-#
+def pos_instead_of_word (training_data):
+# modifies training data so that word is replaced by pos and all the rest of the code works out of the box for it.
+    corpus = training_data["train_corpus"]
+    i = 0;
+    for element in corpus:
+        corpus[i]["word"] = element["pos"]
+        corpus[i]["pos"] = element["word"]
+        i += 1
+
+    training_data["train_corpus"] = corpus
+    training_data["word_list"] = training_data["pos_list"]
+    return training_data
+
+def pos_instead_of_word_test_sent( sentence ):
+#This is similar to function pos_instead_of_word, just that it is transforming the test sentence so that P(pos | t) works
+    new_sent = sentence;
+    i = 0;
+    for element in sentence:
+        new_sent[i]["word"] = element["pos"]
+        new_sent[i]["pos"] = element["word"]
+        i += 1
+    return(new_sent)
+
+def prune_train_data( training_data, b_up, i_up, o_down ):
+# after seeing o_down number of Os drop the next O which occurs immediately after,
+# we only want to prune oooo to a smaller length, and not things like oooboo as we dont wanna loose the
+# transition probability of OB or IO
+# for b_up (i_up), just insert a b-word(i-word) after seeing b_up(i_up) number of Bs (Is)
+# pass -1 for any of b_up,  i_up, o_down if you dont want them to be affected.
+    bio_list  = training_data["bio_list"]
+    corpus = training_data["train_corpus"]
+    new_corpus = []
+    i = 0
+    prev = ""
+    o_counts = 0
+    b_counts = 0
+    i_counts = 0
+    for element in corpus:
+        new_corpus += [element]
+        if( bio_list[i] == "B" ):
+            b_counts += 1
+            if(b_counts == b_up):
+                    new_corpus += element
+                    b_counts = 0
+        if( bio_list[i] == "I" ):
+            i_counts += 1
+            if(i_counts == i_up):
+                    new_corpus += element
+                    i_counts = 0
+
+        if( bio_list[i]== "O"):
+            if( prev != 'O'):
+                o_counts = 0
+            o_counts +=1
+            if(o_counts == o_down + 1):
+                del( new_corpus [-1] )
+                o_counts =0
+        prev = bio_list[i]
+        i +=1
+
+    word_list = [ x["word"] for x in new_corpus ];
+    pos_list  = [ x["pos"]  for x in new_corpus ];
+    bio_list  = [ x["bio"]  for x in new_corpus ];
+
+    return({
+            "word_list":word_list,
+            "pos_list":pos_list,
+            "bio_list": bio_list,
+            "train_corpus": new_corpus
+            })
